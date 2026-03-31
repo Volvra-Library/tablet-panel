@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tablet Content Manager</title>
+
+<style>
+body{font-family:Arial;background:#0f1f2e;color:white;margin:0;padding:20px;display:flex;justify-content:center;}
+.panel{background:#1a2a3a;padding:25px;border-radius:14px;width:650px;box-shadow:0 10px 25px rgba(0,0,0,0.5);}
+h2{text-align:center;margin-bottom:20px;}
+label{font-size:14px;color:#b8c5d3;margin-bottom:5px;display:block;}
+select,input{width:100%;height:42px;border-radius:8px;border:none;margin-bottom:10px;}
+button{height:42px;border-radius:8px;border:none;background:#3a6fb5;color:white;cursor:pointer;}
+.row{display:flex;gap:10px;margin-bottom:10px;}
+.deleteBtn{width:42px;background:#c0392b;}
+.section{display:none;}
+.sectionBox{background:#223344;padding:12px;border-radius:10px;margin-bottom:15px;}
+</style>
+
+</head>
+
+<body>
+
+<div class="panel">
+<h2>Tablet Content Manager</h2>
+
+<select id="type" onchange="switchType()">
+<option value="rules">House Rules</option>
+<option value="emergency">Emergency</option>
+<option value="local">Local</option>
+</select>
+
+<!-- RULES -->
+<div id="rulesSection" class="section">
+<div id="rules"></div>
+<button onclick="addRule()">Add Rule</button>
+<button onclick="save()">Save</button>
+</div>
+
+<!-- EMERGENCY -->
+<div id="emergencySection" class="section">
+<input id="host1" placeholder="Host 1">
+<input id="host2" placeholder="Host 2">
+<input id="police" placeholder="Police">
+<input id="hospital" placeholder="Hospital">
+<input id="fire" placeholder="Fire">
+<button onclick="save()">Save</button>
+</div>
+
+<!-- LOCAL -->
+<div id="localSection" class="section">
+<div id="localList"></div>
+<button onclick="addSection()">Add Section</button>
+<button onclick="save()">Save</button>
+</div>
+
+</div>
+
+<script>
+
+const URL = "https://YOUR_PROJECT.supabase.co/rest/v1/devices?id=eq.APT_001";
+const KEY = "YOUR_API_KEY";
+
+/* -------- SWITCH -------- */
+function switchType(){
+  let t=document.getElementById('type').value;
+  rulesSection.style.display=(t==='rules')?'block':'none';
+  emergencySection.style.display=(t==='emergency')?'block':'none';
+  localSection.style.display=(t==='local')?'block':'none';
+}
+
+/* -------- RULES -------- */
+function addRule(){
+  let div=document.createElement("div");
+  div.className="row";
+  div.innerHTML='<input><button class="deleteBtn" onclick="this.parentElement.remove()">X</button>';
+  rules.appendChild(div);
+}
+
+/* -------- LOCAL -------- */
+function addSection(){
+  let sec=document.createElement("div");
+  sec.className="sectionBox";
+  sec.innerHTML='<input placeholder="Section">'+
+                '<div class="places"></div>'+
+                '<button onclick="addPlace(this)">Add Place</button>';
+  localList.appendChild(sec);
+}
+
+function addPlace(btn){
+  let row=document.createElement("div");
+  row.className="row";
+  row.innerHTML='<input placeholder="Place">'+
+                '<input placeholder="Map">'+
+                '<button onclick="this.parentElement.remove()">X</button>';
+  btn.parentElement.querySelector('.places').appendChild(row);
+}
+
+/* -------- SAVE -------- */
+async function save(){
+
+let type=document.getElementById("type").value;
+
+let data={};
+
+/* RULES */
+if(type==="rules"){
+  let r="";
+  document.querySelectorAll("#rules input").forEach(i=>{
+    if(i.value.trim()) r+=i.value+"\n";
+  });
+  data.house_rules=r;
+}
+
+/* EMERGENCY */
+if(type==="emergency"){
+  data.emergency =
+    "host1:"+host1.value+"\n"+
+    "host2:"+host2.value+"\n"+
+    "police:"+police.value+"\n"+
+    "hospital:"+hospital.value+"\n"+
+    "fire:"+fire.value+"\n";
+}
+
+/* LOCAL */
+if(type==="local"){
+  let out="";
+  document.querySelectorAll(".sectionBox").forEach(sec=>{
+    let title=sec.querySelector("input").value;
+    if(!title) return;
+    out+="["+title+"]\n";
+    sec.querySelectorAll(".row").forEach(r=>{
+      let inputs=r.querySelectorAll("input");
+      if(inputs[0].value && inputs[1].value){
+        out+=inputs[0].value+"|"+inputs[1].value+"\n";
+      }
+    });
+    out+="\n";
+  });
+  data.local_info=out;
+}
+
+/* SEND TO SUPABASE */
+await fetch(URL,{
+  method:"PATCH",
+  headers:{
+    "apikey":KEY,
+    "Authorization":"Bearer "+KEY,
+    "Content-Type":"application/json"
+  },
+  body:JSON.stringify(data)
+});
+
+alert("Saved!");
+}
+
+switchType();
+
+</script>
+
+</body>
+</html>
